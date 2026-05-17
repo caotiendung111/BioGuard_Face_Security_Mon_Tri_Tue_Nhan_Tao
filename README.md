@@ -9,129 +9,118 @@
 [![Low Light](https://img.shields.io/badge/Night%20Shift-CLAHE%20AI-purple?style=flat-square)](#)
 
 **Hệ thống mở khóa khuôn mặt thời gian thực tích hợp Chống giả mạo, Mã hóa sinh trắc học và Trợ lý giọng nói Việt**
+
+---
+
+### 💠 Giao Diện Điều Khiển Cao Cấp (Interactive Biometric Shield Dashboard)
+![DeepLock Pro Dashboard](assets/dashboard.png)
+
 </div>
 
 ---
 
-**DeepLock Pro** (tên gốc: *FaceUnlock*) là hệ thống mở khóa bằng nhận diện khuôn mặt dùng camera điện thoại qua IVcam/IP Camera hoặc camera ảo USB.
-He thong dung model pre-trained cua `face_recognition` de trich xuat embedding 128 chieu, khong train lai model.
+**DeepLock Pro** (tên gốc: *FaceUnlock*) là một giải pháp bảo mật sinh trắc học khuôn mặt thời gian thực toàn diện. Hệ thống tích hợp các thuật toán AI hiện đại cùng khả năng bảo mật cấp doanh nghiệp để mang lại trải nghiệm mở khóa an toàn, nhanh chóng và thông minh trực tiếp qua webcam máy tính hoặc camera điện thoại (IVcam/IP Camera).
 
+---
 
-## Cau truc
+## ⚡ Các Tính Năng Cao Cấp (Core Features)
+
+*   **🛡️ Chống Giả Mạo Đỉnh Cao (Liveness Detection - Anti-Spoofing)**: 
+    *   Tích hợp bộ phân tích chớp mắt tự động **Eye Aspect Ratio (EAR)** qua 15 khung hình liên tiếp.
+    *   Kiểm tra tư thế đầu **Head Pose Estimation** (Yaw, Pitch, Roll) đảm bảo người dùng đang tương tác thực, chống giả mạo hoàn hảo bằng hình ảnh tĩnh hoặc video phát lại từ điện thoại.
+*   **🔐 Mã Hóa Sinh Trắc Học Tối Tân (AES Fernet 128-bit)**: 
+    *   Các vector đặc trưng khuôn mặt (128-D embedding) được trích xuất qua `face_recognition` sẽ được mã hóa đối xứng an toàn trước khi lưu xuống đĩa cứng.
+    *   Khóa mã hóa được quản lý độc lập trong file cấu hình bảo mật `.env`.
+    *   *Tự động di trú (Automatic Migration)*: Tự nâng cấp, mã hóa và ghi đè an toàn các tệp tin lưu trữ cũ không được bảo mật ngay khi khởi chạy.
+*   **🌙 Nhận Diện Ban Đêm Thông Minh (Night Shift AI - CLAHE)**: 
+    *   Tự động đo đạc độ sáng môi trường trung bình.
+    *   Áp dụng thuật toán cân bằng biểu đồ thích ứng giới hạn độ tương phản (**CLAHE**) trên kênh Lightness của không gian màu LAB giúp tăng độ nhạy và chi tiết khuôn mặt lên gấp **2 lần** trong điều kiện thiếu sáng.
+*   **🗣️ Trợ Lý Giọng Nói Việt Thân Thiện (Vietnamese TTS)**: 
+    *   Tự động sinh phản hồi giọng nói tiếng Việt bằng `gTTS` và truyền phát mượt mà qua HTML5 Audio trực tiếp trên luồng RAM, không tạo file tạm làm rác bộ nhớ đĩa.
+    *   Thông báo chào mừng người dùng bằng tên khi mở khóa thành công, cảnh báo hành vi giả mạo hoặc có người lạ nhìn trộm.
+*   **👻 Chế Độ Nhận Diện Nhìn Trộm (Ghost Mode / Shoulder Surfing)**: 
+    *   Sử dụng AI quét toàn bộ các gương mặt xuất hiện trong khung hình để phát hiện và đưa ra cảnh báo khẩn cấp nếu phát hiện có kẻ thứ ba đang nhìn trộm phía sau lưng bạn.
+
+---
+
+## 📂 Cấu Trúc Thư Mục (Project Architecture)
 
 ```text
 FaceUnlock/
-+-- faces/
-+-- main.py
-+-- face_utils.py
-+-- requirements.txt
+├── assets/                  # Tài nguyên hình ảnh, dashboard
+├── faces/                   # Cơ sở dữ liệu khuôn mặt đã mã hóa (.npy.enc)
+├── app.py                   # Giao diện Streamlit Dashboard chính
+├── main.py                  # Core logic nhận diện khuôn mặt
+├── face_utils.py            # Tiện ích AI xử lý ảnh, Liveness, CLAHE, TTS
+├── test_encryption.py       # Kịch bản kiểm thử tự động hệ thống
+├── requirements.txt         # Danh sách thư viện phụ thuộc
+└── .env.example             # File cấu hình biến môi trường mẫu
 ```
 
-## Cai dat
+---
 
-Neu ban da cai moi truong truoc do va dang chay duoc `python main.py`, khong can cai lai.
+## 🛠️ Hướng Dẫn Cài Đặt (Installation Guide)
 
-Neu tao moi moi truong:
+### 1. Chuẩn bị Môi trường ảo (Virtual Environment)
+Nếu bạn chưa thiết lập môi trường, hãy chạy các lệnh sau:
 
 ```powershell
+# Di chuyển vào thư mục dự án
 cd FaceUnlock
+
+# Tạo môi trường ảo Python 3.12
 py -3.12 -m venv .venv
+
+# Kích hoạt môi trường ảo
 .venv\Scripts\Activate.ps1
+
+# Cập nhật pip và cài đặt thư viện phụ thuộc
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-## Chay voi IVcam USB camera ao
-
-Neu ban cam dien thoai qua USB va IVcam/DroidCam tao camera ao tren Windows, thuong chi can dung camera index `1`:
-
+### 2. Thiết lập Biến môi trường
+Sao chép `.env.example` thành `.env` để chương trình tự động tạo khóa mã hóa:
 ```powershell
-python main.py --camera 1
+copy .env.example .env
 ```
 
-Neu khong len hinh, thu cac index khac:
+---
 
+## 🚀 Hướng Dẫn Vận Hành (Running the Project)
+
+### Khởi Chạy Streamlit Dashboard Chuyên Nghiệp
+Đây là giao diện điều khiển trung tâm với đầy đủ Telemetry trực quan:
 ```powershell
-python main.py --camera 0
-python main.py --camera 2
+streamlit run app.py
 ```
 
-## Chay voi IVcam/IP Camera qua Wi-Fi
+### Khởi Chạy Giao Diện Terminal Mặc Định
+Hỗ trợ stream video qua camera ảo hoặc IP Camera:
 
-1. Cai IVcam hoac IP Webcam tren dien thoai.
-2. Ket noi dien thoai va may tinh vao cung mang Wi-Fi.
-3. Mo app camera tren dien thoai, lay IP stream, thuong co dang:
+*   **Chạy với camera ảo USB (IVcam/DroidCam):**
+    ```powershell
+    python main.py --camera 1
+    ```
+*   **Chạy với IP Camera qua mạng Wi-Fi:**
+    Kết nối điện thoại và máy tính cùng mạng Wi-Fi, lấy URL stream từ app và khởi chạy:
+    ```powershell
+    python main.py --url http://192.168.1.5:8080/video
+    ```
 
-```text
-http://<IP_DIEN_THOAI>:8080/video
-```
+**Phím tắt nhanh trong chế độ Terminal:**
+*   `r`: Đăng ký khuôn mặt mới (nhập tên trong Terminal).
+*   `q`: Thoát chương trình.
 
-Chay va nhap IP khi duoc hoi:
+---
 
-```powershell
-python main.py
-```
-
-Tuy chinh:
-
-```powershell
-python main.py --ip 192.168.1.5
-python main.py --url http://192.168.1.5:8080/video
-python main.py --camera 1
-python main.py --threshold 0.5
-```
-
-- `--camera`: camera index tren may tinh, dung cho IVcam USB camera ao.
-- `--ip`: IP dien thoai, code tu ghep thanh `http://IP:8080/video`.
-- `--url`: URL stream day du.
-- `--port`: port stream, mac dinh `8080`.
-- `--threshold`: nguong mo khoa cho full-face.
-
-## Phim tat
-
-- `r`: dang ky khuon mat moi, nen thao khau trang.
-- `q`: thoat.
-
-Khi dang ky, chuong trinh hoi ten trong terminal va luu embedding vao:
-
-```text
-faces/<ten_nguoi_dung>.npy
-```
-
-Neu file da ton tai, chuong trinh se hoi truoc khi ghi de.
-
-## Co che xac thuc & Bao mat (Cap nhat Phase 1)
-
-1. **Ma hoa Sinh trac hoc (AES Fernet 128-bit) 🔐**:
-   - Cac file dac trung khuon mat `.npy` trong thu muc `faces/` bay gio khong con la du lieu tho. Chung da duoc ma hoa bang thu vien Cryptography su dung thuan toan Fernet.
-   - Khoa ma hoa `ENCRYPTION_KEY` duoc luu an toan trong file `.env` o thu muc goc.
-   - **MIGRATION TU DONG**: He thong hoan toan tuong thich nguoc. Khi ban khoi chay phien ban moi nay lan dau tien, he thong se tu dong quet cac file `.npy` cu chua ma hoa, nap vao RAM, chuan hoa vector, tien hanh ma hoa bao mat va ghi de an toan lai len dia. Ban khong can lam thu cong bat ky buoc nao!
-
-2. **Tang cuong anh sang yeu (Night Shift AI - CLAHE) 🌙**:
-   - He thong tu dong phat hien neu do sang moi truong trung binh cua camera thap hon nguong an toan (75.0).
-   - Khi do, bo loc CLAHE se duoc ap dung truc tiep len kenh Lightness (he LAB) de tang do tuong phan va do chi tiet cua khuon mat truoc khi dua vao cac pipeline AI (phat hien va nhan dien). Nhan dien nhay gap 2 lan vao ban dem!
-
-3. **Giong noi tro ly Viet TTS (gTTS + Web Audio) 🗣️**:
-   - Khi xac thuc thanh cong hoac phat hien lua dao, tro ly tieng Viet se tu dong phat am thanh thong bao truc tiep tren trinh duyet nguoi dung (vi du: *"Quyen truy cap duoc phe duyet. Chao mung [Ten]!"*).
-   - Am thanh duoc tao va phat hoan toan tren RAM (Memory Stream) bang `gTTS` va HTML5 Audio tag an, dam bao khong tao bat ky file rac nao tren o cung, chay da nen tang khong phu thuoc phan cung loa may chu.
-   - Sidebar streamlit co toggle: "Enable Voice Guidance 🗣️" de bat/tat tieng cuc ky ton trong trai nghiem nguoi dung.
-
-## Huong dan chay Kiem thu tu dong
-
-De dam bao moi thu luon on dinh truoc khi trien khai thuc te, ban co the chay script kiem thu doc lap (ASCII-safe):
-
+## 🧪 Kiểm Thử Tự Động (Automated Testing)
+Đảm bảo hệ thống vận hành trơn tru và bảo mật tuyệt đối trước khi triển khai thực tế bằng script test:
 ```powershell
 python test_encryption.py
 ```
-
-Script nay se tu dong kiem tra:
-- Khoi tao khoa Fernet va ghi file `.env`.
-- Tinh toan ma hoa/giai ma trung thuc 100% (sai so < 1e-6).
-- Gia lap file `.npy` cu va kiem thu di tru du lieu ma hoa tu dong tren dia.
-- Gia lap anh toi va kiem thu bo loc CLAHE hoat dong khong loi.
-
-## Ghi chu
-
-- Neu deo khau trang, chuong trinh crop upper-face bang landmarks roi moi trich embedding.
-- Liveness dung Eye Aspect Ratio qua 15 frame lien tiep kem theo check huong dau Head Pose.
-- Neu MediaPipe ban hien tai khong co API `mp.solutions`, code fallback sang landmarks cua `face_recognition` de tranh crash tren may da cai truoc do.
+Kịch bản test sẽ tự động xác minh:
+* Khởi tạo và đồng bộ hóa khóa Fernet.
+* Độ chính xác mã hóa vector (sai số tuyệt đối < 1e-6).
+* Khả năng tự động quét và di trú dữ liệu cũ trên ổ đĩa.
+* Khả năng tương thích của bộ lọc CLAHE ban đêm.
