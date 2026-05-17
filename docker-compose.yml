@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    container_name: deeplock_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./faces:/app/faces
+      - ./access_log.csv:/app/access_log.csv
+      - ./.env:/app/.env
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: uvicorn backend:app --host 0.0.0.0 --port 8000
+
+  frontend:
+    build: .
+    container_name: deeplock_frontend
+    restart: always
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./faces:/app/faces
+      - ./access_log.csv:/app/access_log.csv
+      - ./.env:/app/.env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - FACEUNLOCK_CAMERA_URL=${FACEUNLOCK_CAMERA_URL:-}
+    command: streamlit run app.py --server.port=8501 --server.address=0.0.0.0
+    depends_on:
+      - backend

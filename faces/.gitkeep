@@ -1,0 +1,2 @@
+# This file exists to ensure the 'faces' directory is tracked by Git, 
+# while its actual face embedding content (.npy files) remains ignored for security and privacy.

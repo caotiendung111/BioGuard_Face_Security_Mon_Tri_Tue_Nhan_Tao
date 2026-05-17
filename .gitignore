@@ -1,0 +1,35 @@
+# Python compiler cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments (Virtual environments)
+.venv/
+venv/
+ENV/
+env/
+active_env/
+
+# Sensitive API & Cryptography keys
+.env
+!.env.example
+
+# Face data & databases (To prevent pushing real face templates)
+faces/*
+!faces/.gitkeep
+access_log.csv
+
+# Operating System files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# IDE / Editor configurations
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
