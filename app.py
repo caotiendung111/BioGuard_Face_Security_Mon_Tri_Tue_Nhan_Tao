@@ -37,7 +37,7 @@ from main import (
     MASK_THRESHOLD
 )
 
-# Tải biến môi trường
+# Load environment variables
 load_dotenv()
 
 # Configuration
@@ -68,9 +68,9 @@ if "last_voiced_event" not in st.session_state:
     st.session_state.last_voiced_event = None
 
 def speak(text: str):
-    """Phát âm thanh từ văn bản tiếng Việt hoàn toàn trong bộ nhớ RAM qua HTML5 ẩn."""
+    """Generates and plays English TTS audio fully in RAM via an hidden HTML5 element."""
     try:
-        tts = gTTS(text=text, lang="vi")
+        tts = gTTS(text=text, lang="en")
         fp = io.BytesIO()
         tts.write_to_fp(fp)
         fp.seek(0)
@@ -83,8 +83,8 @@ def speak(text: str):
         """
         st.markdown(audio_html, unsafe_allow_html=True)
     except Exception as e:
-        # Nếu mất mạng hoặc gTTS lỗi, không làm đứng chương trình, chỉ hiển thị toast nhỏ
-        st.toast(f"Hệ thống giọng nói bận: {e}", icon="🗣️")
+        # If network is down or gTTS fails, prevent app crash and show a toast warning
+        st.toast(f"Voice system busy: {e}", icon="🗣️")
 
 def log_access(name, status, score):
     now = datetime.now()
@@ -120,7 +120,7 @@ def main():
         st.markdown("### 👥 User Management")
         registered = load_known_faces_encrypted(FACES_DIR)
         
-        # Nhóm các mẫu theo tên người dùng gốc (Multi-Template grouping)
+        # Group templates by base username (Multi-Template grouping)
         grouped_users = {}
         for full_name in list(registered.keys()):
             base = get_base_username(full_name)
@@ -128,9 +128,9 @@ def main():
             
         for base, count in grouped_users.items():
             col1, col2 = st.columns([4, 1])
-            col1.text(f"👤 {base} ({count} mẫu)")
+            col1.text(f"👤 {base} ({count} samples)")
             if col2.button("❌", key=f"del_{base}"):
-                # Xóa tất cả các tệp mẫu của người dùng này (bao gồm cả file legacy cũ)
+                # Delete all template files for this user (including legacy files)
                 deleted_any = False
                 for suffix in ["", "_0", "_1", "_2"]:
                     for ext in [".npy", ".enc"]:
@@ -228,7 +228,7 @@ def main():
                 display_frame = frame.copy()
             
             # 1. Detection & Mesh (Run every frame for smooth UI)
-            # Optimize: Dung frame thap de xu ly AI, nhung hien thi frame cao
+            # Optimize: Use low resolution frame for AI processing, but display high resolution frame
             process_frame = cv2.resize(frame, (320, 240))
             box_small = detect_face(process_frame) if not is_headless else None
             
@@ -413,30 +413,30 @@ def main():
             badge_class = "status-unlocked" if status == "UNLOCKED" else "status-locked"
             status_bar.markdown(f'<div class="status-badge {badge_class}">SYSTEM STATE: {status} | TARGET: {curr_name}</div>', unsafe_allow_html=True)
             
-            # --- TRÌNH DIỄN GIỌNG NÓI TTS (PHASE 1 & 2 & 3) ---
+            # --- TTS AUDIO VOICE FEEDBACK (PHASES 1, 2 & 3) ---
             if status == "UNLOCKED":
                 event_key = f"unlock_{curr_name}"
                 if st.session_state.last_voiced_event != event_key:
                     if voice_enabled:
-                        speak(f"Quyền truy cập được phê duyệt. Chào mừng {curr_name}!")
+                        speak(f"Access granted. Welcome {curr_name}!")
                     st.session_state.last_voiced_event = event_key
             elif status == "LIVENESS_FAIL":
                 event_key = f"fail_{liveness_status}"
                 if st.session_state.last_voiced_event != event_key:
                     if voice_enabled:
                         if "Spoof" in liveness_status:
-                            speak("Cảnh báo. Phát hiện giả mạo khuôn mặt!")
+                            speak("Warning. Spoofing attempt detected!")
                         else:
-                            speak("Truy cập bị từ chối. Vui lòng nháy mắt để xác thực sinh trắc học!")
+                            speak("Access denied. Please blink to perform biometric authentication!")
                     st.session_state.last_voiced_event = event_key
             elif status == "GHOST_ALERT":
                 event_key = "ghost_alert"
                 if st.session_state.last_voiced_event != event_key:
                     if voice_enabled:
-                        speak("Cảnh báo. Phát hiện có người lạ nhìn trộm phía sau lưng!")
+                        speak("Warning. An unauthorized observer has been detected behind you!")
                     st.session_state.last_voiced_event = event_key
             elif status == "LOCKED":
-                # Reset voiced state khi hệ thống khóa trở lại và không có mặt
+                # Reset voiced state when the system locks again and no face is present
                 st.session_state.last_voiced_event = None
 
             # Update History Table

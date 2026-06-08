@@ -2,125 +2,164 @@
 
 <div align="center">
 
+[![GitHub Actions CI](https://img.shields.io/github/actions/workflow/status/caotiendung111/bioguard-face-security/ci.yml?branch=main&logo=github&style=flat-square)](https://github.com/caotiendung111/bioguard-face-security/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 [![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python&style=flat-square)](https://www.python.org/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-Framework-FF4B4B?logo=streamlit&style=flat-square)](https://streamlit.io/)
 [![Cryptography](https://img.shields.io/badge/Biometrics-AES--128--Fernet-success?logo=keybase&style=flat-square)](https://cryptography.io/)
 [![Liveness](https://img.shields.io/badge/Liveness-Anti--Spoofing-orange?style=flat-square)](#)
 [![Low Light](https://img.shields.io/badge/Night%20Shift-CLAHE%20AI-purple?style=flat-square)](#)
 
-**Hệ thống mở khóa khuôn mặt thời gian thực tích hợp Chống giả mạo, Mã hóa sinh trắc học và Trợ lý giọng nói Việt**
+**A premium real-time face unlock system featuring Liveness Detection (Anti-spoofing), AES-128 Fernet Biometric Encryption, and a Vietnamese Voice Assistant.**
 
 ---
 
-### 💠 Giao Diện Điều Khiển Cao Cấp (Interactive Biometric Shield Dashboard)
+### 💠 Interactive Biometric Shield Dashboard
 ![DeepLock Pro Dashboard](assets/dashboard.png)
 
 </div>
 
 ---
 
-**DeepLock Pro** (tên gốc: *FaceUnlock*) là một giải pháp bảo mật sinh trắc học khuôn mặt thời gian thực toàn diện. Hệ thống tích hợp các thuật toán AI hiện đại cùng khả năng bảo mật cấp doanh nghiệp để mang lại trải nghiệm mở khóa an toàn, nhanh chóng và thông minh trực tiếp qua webcam máy tính hoặc camera điện thoại (IVcam/IP Camera).
+**DeepLock Pro** (originally named *FaceUnlock*) is a comprehensive, enterprise-grade real-time biometric face authentication solution. It integrates modern AI computer vision algorithms with secure, localized cryptographic structures to deliver a safe, fast, and intelligent authentication experience via local webcams or remote IP Cameras.
 
 ---
 
-## ⚡ Các Tính Năng Cao Cấp (Core Features)
+## 🏗️ System Architecture
 
-*   **🛡️ Chống Giả Mạo Đỉnh Cao (Liveness Detection - Anti-Spoofing)**: 
-    *   Tích hợp bộ phân tích chớp mắt tự động **Eye Aspect Ratio (EAR)** qua 15 khung hình liên tiếp.
-    *   Kiểm tra tư thế đầu **Head Pose Estimation** (Yaw, Pitch, Roll) đảm bảo người dùng đang tương tác thực, chống giả mạo hoàn hảo bằng hình ảnh tĩnh hoặc video phát lại từ điện thoại.
-*   **🔐 Mã Hóa Sinh Trắc Học Tối Tân (AES Fernet 128-bit)**: 
-    *   Các vector đặc trưng khuôn mặt (128-D embedding) được trích xuất qua `face_recognition` sẽ được mã hóa đối xứng an toàn trước khi lưu xuống đĩa cứng.
-    *   Khóa mã hóa được quản lý độc lập trong file cấu hình bảo mật `.env`.
-    *   *Tự động di trú (Automatic Migration)*: Tự nâng cấp, mã hóa và ghi đè an toàn các tệp tin lưu trữ cũ không được bảo mật ngay khi khởi chạy.
-*   **🌙 Nhận Diện Ban Đêm Thông Minh (Night Shift AI - CLAHE)**: 
-    *   Tự động đo đạc độ sáng môi trường trung bình.
-    *   Áp dụng thuật toán cân bằng biểu đồ thích ứng giới hạn độ tương phản (**CLAHE**) trên kênh Lightness của không gian màu LAB giúp tăng độ nhạy và chi tiết khuôn mặt lên gấp **2 lần** trong điều kiện thiếu sáng.
-*   **🗣️ Trợ Lý Giọng Nói Việt Thân Thiện (Vietnamese TTS)**: 
-    *   Tự động sinh phản hồi giọng nói tiếng Việt bằng `gTTS` và truyền phát mượt mà qua HTML5 Audio trực tiếp trên luồng RAM, không tạo file tạm làm rác bộ nhớ đĩa.
-    *   Thông báo chào mừng người dùng bằng tên khi mở khóa thành công, cảnh báo hành vi giả mạo hoặc có người lạ nhìn trộm.
-*   **👻 Chế Độ Nhận Diện Nhìn Trộm (Ghost Mode / Shoulder Surfing)**: 
-    *   Sử dụng AI quét toàn bộ các gương mặt xuất hiện trong khung hình để phát hiện và đưa ra cảnh báo khẩn cấp nếu phát hiện có kẻ thứ ba đang nhìn trộm phía sau lưng bạn.
+The following diagram illustrates the flow of data through the biometric authentication pipeline, from raw frame capture to low-light enhancement, land-marking, liveness checks, cryptographic vector matching, and interactive voice welcome:
 
----
-
-## 📂 Cấu Trúc Thư Mục (Project Architecture)
-
-```text
-FaceUnlock/
-├── assets/                  # Tài nguyên hình ảnh, dashboard
-├── faces/                   # Cơ sở dữ liệu khuôn mặt đã mã hóa (.npy.enc)
-├── app.py                   # Giao diện Streamlit Dashboard chính
-├── main.py                  # Core logic nhận diện khuôn mặt
-├── face_utils.py            # Tiện ích AI xử lý ảnh, Liveness, CLAHE, TTS
-├── test_encryption.py       # Kịch bản kiểm thử tự động hệ thống
-├── requirements.txt         # Danh sách thư viện phụ thuộc
-└── .env.example             # File cấu hình biến môi trường mẫu
+```mermaid
+graph TD
+    Frame[Webcam / IP Camera Video Frame] --> LightChk{Low Light?}
+    LightChk -- Yes --> CLAHE[CLAHE Image Contrast Enhancer]
+    LightChk -- No --> Detect[Face Detection & Landmarking - MediaPipe]
+    CLAHE --> Detect
+    Detect --> Liveness{Liveness Checks passed?}
+    Liveness -- EAR/Pose/Anti-Spoofing -- -- No --> Block[Spoofing Alert / Audio Warning]
+    Liveness -- Yes --> Embed[Extract 128-D Biometric Embedding]
+    Embed --> Crypt[Symmetric Cryptographic Decryption - Fernet]
+    DB[(Encrypted Database - faces/*.npy.enc)] --> Crypt
+    Crypt --> Auth{Match Found?}
+    Auth -- Yes --> Access[Grant Access & Audio Welcome - gTTS]
+    Auth -- No --> Deny[Deny Access / Alert Logged]
 ```
 
 ---
 
-## 🛠️ Hướng Dẫn Cài Đặt (Installation Guide)
+## ⚡ Core Features
 
-### 1. Chuẩn bị Môi trường ảo (Virtual Environment)
-Nếu bạn chưa thiết lập môi trường, hãy chạy các lệnh sau:
+*   **🛡️ State-of-the-Art Anti-Spoofing (Liveness Detection)**:
+    *   **Eye Aspect Ratio (EAR)**: Continuously analyzes eye-blinking patterns over 15 consecutive frames.
+    *   **Head Pose Estimation**: Tracks 3D head orientation (Yaw, Pitch, Roll) to verify active user presence, successfully defending against static photos and video replay attacks.
+*   **🔐 Biometric Encryption (AES Fernet 128-bit)**:
+    *   Extracted 128-D face embeddings (via `face_recognition`) are symmetrically encrypted before writing to disk.
+    *   Cryptographic keys are managed securely through `.env` files.
+    *   **Automatic Migration**: Automatically scans, encrypts, and overrides any existing unsecured biometric files at runtime.
+*   **🌙 Night Shift AI (CLAHE Low-Light Enhancement)**:
+    *   Automatically measures average ambient lighting in real-time.
+    *   Applies Contrast Limited Adaptive Histogram Equalization (**CLAHE**) on the Lightness channel of the LAB color space, improving face recognition sensitivity and accuracy by up to **2x** in dim environments.
+*   **🗣️ Interactive Audio Feedback (Vietnamese Text-to-Speech)**:
+    *   Generates runtime audio feedback using `gTTS` directly in memory streams (no disk I/O latency).
+    *   Welcomes authenticated users by name and plays warnings for spoofing or shoulder-surfing behaviors.
+*   **👥 Shoulder Surfing Detection (Ghost Mode)**:
+    *   Scans the background for multiple faces and alerts the user if an unauthorized person is looking over their shoulder.
+
+---
+
+## 📂 Project Architecture
+
+```text
+FaceUnlock/
+├── .github/workflows/       # GitHub Actions CI configurations
+│   └── ci.yml
+├── assets/                  # Media resources, UI graphics, and screenshots
+├── faces/                   # Encrypted biometric database (.npy.enc)
+├── tests/                   # Automated unit and integration tests
+│   └── test_encryption.py
+├── app.py                   # Central Streamlit web dashboard
+├── main.py                  # Core terminal-based camera processing loop
+├── face_utils.py            # AI inference, Liveness detection, CLAHE, and Audio utilities
+├── requirements.txt         # Production library dependencies
+├── requirements-dev.txt     # Development and testing dependencies
+└── .env.example             # Template for environment configuration
+```
+
+---
+
+## 🛠️ Installation Guide
+
+### 1. Setup Virtual Environment
+Run the following commands to initialize and activate a Python virtual environment:
 
 ```powershell
-# Di chuyển vào thư mục dự án
+# Navigate into the project folder
 cd FaceUnlock
 
-# Tạo môi trường ảo Python 3.12
+# Create a Python 3.12 virtual environment
 py -3.12 -m venv .venv
 
-# Kích hoạt môi trường ảo
+# Activate the virtual environment
 .venv\Scripts\Activate.ps1
 
-# Cập nhật pip và cài đặt thư viện phụ thuộc
+# Upgrade package manager and install dependencies
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 2. Thiết lập Biến môi trường
-Sao chép `.env.example` thành `.env` để chương trình tự động tạo khóa mã hóa:
+### 2. Configure Environment Variables
+Copy the `.env.example` file to `.env` to initialize key generation:
 ```powershell
 copy .env.example .env
 ```
 
 ---
 
-## 🚀 Hướng Dẫn Vận Hành (Running the Project)
+## 🚀 Running the Project
 
-### Khởi Chạy Streamlit Dashboard Chuyên Nghiệp
-Đây là giao diện điều khiển trung tâm với đầy đủ Telemetry trực quan:
+### Streamlit Web Dashboard
+Launch the web interface providing real-time telemetry and a biometric control dashboard:
 ```powershell
 streamlit run app.py
 ```
 
-### Khởi Chạy Giao Diện Terminal Mặc Định
-Hỗ trợ stream video qua camera ảo hoặc IP Camera:
+### Terminal Interface
+Run the main loop in the console with support for USB webcams or IP cameras:
 
-*   **Chạy với camera ảo USB (IVcam/DroidCam):**
+*   **Launch via default USB webcam / Virtual Camera:**
     ```powershell
     python main.py --camera 1
     ```
-*   **Chạy với IP Camera qua mạng Wi-Fi:**
-    Kết nối điện thoại và máy tính cùng mạng Wi-Fi, lấy URL stream từ app và khởi chạy:
+*   **Launch via IP Camera RTSP/HTTP Stream:**
+    Ensure your device and PC are on the same local network, fetch the streaming URL, and run:
     ```powershell
     python main.py --url http://192.168.1.5:8080/video
     ```
 
-**Phím tắt nhanh trong chế độ Terminal:**
-*   `r`: Đăng ký khuôn mặt mới (nhập tên trong Terminal).
-*   `q`: Thoát chương trình.
+**Console Controls:**
+*   Press `r` to register a new user face (input their name in the console).
+*   Press `q` to quit the application stream.
 
 ---
 
-## 🧪 Kiểm Thử Tự Động (Automated Testing)
-Đảm bảo hệ thống vận hành trơn tru và bảo mật tuyệt đối trước khi triển khai thực tế bằng script test:
+## 🧪 Automated Testing
+Run automated unit tests to verify system security, cryptographic standards, and computer vision filters:
 ```powershell
-python test_encryption.py
+pytest
 ```
-Kịch bản test sẽ tự động xác minh:
-* Khởi tạo và đồng bộ hóa khóa Fernet.
-* Độ chính xác mã hóa vector (sai số tuyệt đối < 1e-6).
-* Khả năng tự động quét và di trú dữ liệu cũ trên ổ đĩa.
-* Khả năng tương thích của bộ lọc CLAHE ban đêm.
+The test suite validates:
+*   Fernet key generation and secure loading.
+*   128-D vector encryption parity (tolerance error < 1e-6).
+*   Automatic database migration for legacy unencrypted files.
+*   CLAHE color space conversion stability.
+
+---
+
+## 📈 Known Limitations & Future Improvements
+
+To show engineering foresight, we document the core physical limitations of the local model deployment and the roadmap for enterprise scaling:
+
+- **CPU-bound Inference Bottleneck**: Model inference for face land-marking (MediaPipe) and vector mapping (`dlib`/`face_recognition`) is CPU-heavy on local machines. In a production environment, this should be offloaded to a GPU instance or run asynchronously via a task broker queue (e.g., Celery with Redis).
+- **Physical Device Dependency for Audio**: Local playback of Text-to-Speech audio uses `pygame`, which queries local sound devices (like ALSA on Linux or CoreAudio on macOS). This makes headless Docker deployments throw output device warnings. An enterprise improvement would be serving the TTS audio payload stream as an base64 encoded audio asset inside a REST API response for browser-side rendering.
+- **Flat-file Biometric Database**: The localized storage of encrypted vectors in flat `.npy.enc` files works well for small groups of users but is inefficient for large-scale operations. A future improvement is migrating the vectors to a dedicated vector database index (such as **ChromaDB**, **Milvus**, or **pgvector** in PostgreSQL) to support fast Cosine Similarity searches on thousands of entries.
+- **Single-user Bias**: The liveness checks are optimized for validating one subject standing in front of the lens. Support for group/multi-person authentication requires multi-threading of liveness state machines across active face bounding box IDs.

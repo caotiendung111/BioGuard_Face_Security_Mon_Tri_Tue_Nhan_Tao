@@ -42,7 +42,7 @@ app = FastAPI(
 FACES_DIR = Path(os.getenv("FACEUNLOCK_FACES_DIR", "faces"))
 LOG_FILE = Path(os.getenv("FACEUNLOCK_LOG_FILE", "access_log.csv"))
 
-# API Key Security (Token mặc định nếu chưa cấu hình trong .env)
+# API Key Security (Fallback default token if not configured in .env)
 API_KEY = os.getenv("API_KEY", "deeplock-secret-token-2026")
 api_key_header = APIKeyHeader(name="X-API-KEY", auto_error=False)
 
@@ -52,7 +52,7 @@ def verify_api_key(api_key: str = Depends(api_key_header)):
     return api_key
 
 def log_access(username: str, status: str, score: float):
-    """Ghi nhật ký đăng nhập đồng bộ."""
+    """Synchronous login access logging."""
     new_entry = {
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
         "username": username,
@@ -66,7 +66,7 @@ def log_access(username: str, status: str, score: float):
         df.to_csv(LOG_FILE, index=False)
 
 def bytes_to_cv2(image_bytes: bytes) -> np.ndarray:
-    """Chuyển đổi bytes ảnh tải lên thành OpenCV BGR Image."""
+    """Convert uploaded image bytes into an OpenCV BGR Image."""
     nparr = np.frombuffer(image_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     if img is None:
@@ -89,7 +89,7 @@ async def enroll_identity(
     api_key: str = Depends(verify_api_key)
 ):
     """
-    Đăng ký định danh mới hỗ trợ Đa mẫu (Multi-template)
+    Enroll a new user identity supporting Multi-Template grouping.
     """
     cleaned_name = safe_name(username)
     if not cleaned_name:
@@ -98,17 +98,17 @@ async def enroll_identity(
     contents = await file.read()
     image = bytes_to_cv2(contents)
     
-    # 1. Phát hiện mặt
+    # 1. Detect face
     box = detect_face(image)
     if box is None:
         raise HTTPException(status_code=400, detail="No face detected in the image.")
         
-    # 2. Trích xuất đặc trưng
+    # 2. Extract biometric embeddings
     emb = get_embedding(image, box)
     if emb is None:
         raise HTTPException(status_code=400, detail="Failed to extract face embedding.")
         
-    # 3. Lưu trữ mã hóa đa mẫu
+    # 3. Save encrypted templates
     norm_emb = normalize_embedding(emb)
     save_idx = save_face_multi_template(cleaned_name, norm_emb, FACES_DIR)
     
@@ -126,23 +126,23 @@ async def verify_identity(
     api_key: str = Depends(verify_api_key)
 ):
     """
-    Xác minh danh tính sinh trắc học thời gian thực
-    Tích hợp lá chắn chống giả mạo Liveness (Laplacian & FFT Moire)
+    Verify real-time biometric face identity.
+    Integrates Liveness anti-spoofing defense (Laplacian & FFT Moire).
     """
     contents = await file.read()
     image = bytes_to_cv2(contents)
     
-    # Thiết lập ngưỡng theo cấp độ bảo mật
+    # Set threshold based on security level
     threshold = 0.45
     if security_level == "High": threshold = 0.55
     elif security_level == "Ultra": threshold = 0.65
     
-    # 1. Tải danh sách mẫu đã đăng ký
+    # 1. Load registered user templates
     registered = load_known_faces_encrypted(FACES_DIR)
     if not registered:
         raise HTTPException(status_code=400, detail="No registered users in the database.")
         
-    # 2. Phát hiện mặt
+    # 2. Detect face
     box = detect_face(image)
     if box is None:
         return {
@@ -150,7 +150,7 @@ async def verify_identity(
             "reason": "No face detected in the image"
         }
         
-    # 3. Chống giả mạo (Anti-Spoofing FFT & Laplacian)
+    # 3. Anti-spoofing liveness check (FFT & Laplacian)
     is_real, spoof_reason, spoof_score = check_anti_spoofing(image, box)
     if not is_real:
         log_access("Unknown (SPOOF)", "DENIED", spoof_score)
@@ -160,7 +160,7 @@ async def verify_identity(
             "spoof_score": round(spoof_score, 4)
         }
         
-    # 4. Trích xuất đặc trưng và so khớp
+    # 4. Extract biometric embedding and perform match
     emb = get_embedding(image, box)
     if emb is None:
         return {
@@ -170,10 +170,10 @@ async def verify_identity(
         
     name, score = best_match(emb, registered)
     
-    # 5. Phê duyệt hoặc từ chối
+    # 5. Grant or deny access
     if score >= threshold:
         log_access(name, "GRANTED", score)
-        # Gửi sự kiện MQTT về Smart Home
+        # Publish MQTT event to Smart Home
         publish_mqtt_event(name, "GRANTED")
         return {
             "status": "granted",
@@ -194,7 +194,7 @@ async def verify_identity(
 @app.get("/api/users")
 def list_users(api_key: str = Depends(verify_api_key)):
     """
-    Liệt kê danh sách người dùng và số lượng mẫu đăng ký tương ứng
+    List all enrolled users and their respective template counts.
     """
     registered = load_known_faces_encrypted(FACES_DIR)
     grouped_users = {}
@@ -210,7 +210,7 @@ def list_users(api_key: str = Depends(verify_api_key)):
 @app.delete("/api/users/{username}")
 def delete_user(username: str, api_key: str = Depends(verify_api_key)):
     """
-    Xóa toàn bộ các tệp đặc trưng của người dùng này khỏi đĩa cứng
+    Deep-delete all biometric template files of this user from disk.
     """
     cleaned_name = safe_name(username)
     deleted_any = False

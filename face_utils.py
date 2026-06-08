@@ -61,16 +61,16 @@ def _get_detector():
 
 
 def detect_face(image: np.ndarray) -> Optional[FaceBox]:
-    """Phat hien khuon mat bang MediaPipe (nhanh hon dlib)."""
+    """Detect face using MediaPipe (faster than dlib)."""
     if image is None or image.size == 0:
         return None
 
-    # Tăng cường ánh sáng yếu (Night Shift AI)
+    # Low-light enhancement (Night Shift AI)
     image = enhance_low_light(image)
 
     detector = _get_detector()
     if detector is None:
-        # Fallback sang dlib neu mediapipe loi
+        # Fallback to dlib if mediapipe fails
         rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         locations = face_recognition.face_locations(rgb, model="hog")
         if not locations:
@@ -84,7 +84,7 @@ def detect_face(image: np.ndarray) -> Optional[FaceBox]:
     if not results.detections:
         return None
 
-    # Lay face lon nhat
+    # Get the largest face
     best_detection = max(
         results.detections,
         key=lambda d: d.location_data.relative_bounding_box.width
@@ -92,7 +92,7 @@ def detect_face(image: np.ndarray) -> Optional[FaceBox]:
     )
     bbox = best_detection.location_data.relative_bounding_box
     
-    # Chuyen doi sang format (top, right, bottom, left)
+    # Convert to (top, right, bottom, left) format
     top = int(bbox.ymin * height)
     left = int(bbox.xmin * width)
     bottom = int((bbox.ymin + bbox.height) * height)
@@ -103,11 +103,11 @@ def detect_face(image: np.ndarray) -> Optional[FaceBox]:
 
 
 def get_embedding(image: np.ndarray, bbox: Optional[FaceBox] = None) -> Optional[np.ndarray]:
-    """Trich xuat embedding 128 chieu bang model pre-trained cua face_recognition."""
+    """Extract 128-D embedding using face_recognition pre-trained model."""
     if image is None or image.size == 0:
         return None
 
-    # Tăng cường ánh sáng yếu (Night Shift AI)
+    # Low-light enhancement (Night Shift AI)
     image = enhance_low_light(image)
 
     rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -125,7 +125,7 @@ def get_embedding(image: np.ndarray, bbox: Optional[FaceBox] = None) -> Optional
 
 
 def get_face_landmarks(image: np.ndarray) -> Optional[List[Point3D]]:
-    """Lay 468 landmarks bang MediaPipe Face Mesh; fallback sang dlib neu can."""
+    """Get 468 landmarks using MediaPipe Face Mesh; fallback to dlib if needed."""
     if image is None or image.size == 0:
         return None
 
@@ -142,7 +142,7 @@ def get_face_landmarks(image: np.ndarray) -> Optional[List[Point3D]]:
 
 
 def _get_dlib_landmarks(image: np.ndarray) -> Optional[List[Point3D]]:
-    """Fallback: map mot so moc dlib vao index MediaPipe can dung."""
+    """Fallback: map key dlib landmark points to equivalent MediaPipe indices."""
     rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     faces = face_recognition.face_landmarks(rgb)
     if not faces:
@@ -182,9 +182,9 @@ def _dist(a: Point3D, b: Point3D) -> float:
 
 def is_wearing_mask(landmarks: Optional[Sequence[Point3D]]) -> bool:
     """
-    Phat hien khau trang don gian:
-    - Neu nhieu diem mui/moi khong hop le thi coi la bi che.
-    - Neu khoang mui-cam hoac moi-cam bat thuong nho thi coi la co khau trang.
+    Simple face mask detection:
+    - If many nose/mouth points are invalid, consider it covered.
+    - If nose-to-chin or mouth-to-chin distances are abnormally small, consider a mask present.
     """
     if landmarks is None or len(landmarks) <= CHIN:
         return False
@@ -203,12 +203,12 @@ def is_wearing_mask(landmarks: Optional[Sequence[Point3D]]) -> bool:
     nose_chin = _dist(nose_tip, chin)
     lip_chin = _dist(upper_lip, chin)
 
-    # Nguong thuc nghiem tren toa do normalized. Khau trang thuong lam vung mui/moi kem on dinh.
+    # Empirical thresholds on normalized coordinates. Mask presence reduces nose/mouth stability.
     return nose_chin < 0.12 or lip_chin < 0.06
 
 
 def crop_upper_face(image: np.ndarray, landmarks: Optional[Sequence[Point3D]]) -> Tuple[np.ndarray, Tuple[int, int, int, int]]:
-    """Crop vung upper-face tu dinh tran den duoi mat, tra ve (crop, (x, y, w, h))."""
+    """Crop upper-face region from forehead to below eyes, returning (cropped_img, (x, y, w, h))."""
     if image is None or image.size == 0:
         return image, (0, 0, 0, 0)
 
@@ -253,7 +253,7 @@ def check_blink(
     low_threshold: float = 0.25,
     high_threshold: float = 0.30,
 ) -> bool:
-    """Phat hien chop mat: EAR < 0.25 roi tang lai > 0.3 trong chuoi 10 frame."""
+    """Detect eye blink: EAR < 0.25 then increases back > 0.3 within a 15-frame history."""
     saw_closed = False
 
     for landmarks in landmarks_list:
@@ -275,16 +275,16 @@ def check_blink(
 
 
 def get_head_pose(landmarks: List[Point3D]) -> Tuple[float, float, float]:
-    """Uoc luong huong dau (pitch, yaw, roll) tu landmarks."""
+    """Estimate head orientation (pitch, yaw, roll) from landmarks."""
     if not landmarks or len(landmarks) < 468:
         return 0.0, 0.0, 0.0
 
-    # Lay cac diem moc chinh
+    # Get key landmark points
     nose_tip = landmarks[1]
     left_eye = landmarks[33]
     right_eye = landmarks[263]
 
-    # Map vao toa do 2D (don gian hoa)
+    # Map to 2D coordinates (simplified estimation)
     pitch = (nose_tip[1] - (left_eye[1] + right_eye[1]) / 2) * 100
     yaw = (nose_tip[0] - (left_eye[0] + right_eye[0]) / 2) * 100
     roll = (right_eye[1] - left_eye[1]) * 100
@@ -293,7 +293,7 @@ def get_head_pose(landmarks: List[Point3D]) -> Tuple[float, float, float]:
 
 
 def check_liveness_v2(history: List[List[Point3D]]) -> Tuple[bool, str]:
-    """Kiem tra liveness nang cao: chop mat + quay dau."""
+    """Advanced liveness verification: eye blink + head turn."""
     if len(history) < 5:
         return False, "Collecting data..."
 
@@ -310,16 +310,16 @@ def check_liveness_v2(history: List[List[Point3D]]) -> Tuple[bool, str]:
 
 
 def draw_face_mesh(image: np.ndarray, landmarks: List[Point3D]):
-    """Ve mesh toi uu de khong gay lag va fix loi line tu goc man hinh."""
+    """Draw optimized face mesh to avoid UI lag and fix line artifacts from screen corners."""
     height, width = image.shape[:2]
     
-    # Ve cac diem vung mat, moi de co cam giac AI nhung khong nang may
+    # Draw eye and mouth points for AI telemetry without overhead
     def draw_list(indices, color=(0, 255, 255), closed=True):
         pts = []
         for idx in indices:
             if idx < len(landmarks):
                 p = landmarks[idx]
-                # Bo qua cac diem loi (0,0) hoac ngoai man hinh
+                # Skip invalid or off-screen points
                 if 0.001 < p[0] < 0.999 and 0.001 < p[1] < 0.999:
                     pts.append((int(p[0] * width), int(p[1] * height)))
         
@@ -327,39 +327,39 @@ def draw_face_mesh(image: np.ndarray, landmarks: List[Point3D]):
             for i in range(len(pts) - (0 if closed else 1)):
                 cv2.line(image, pts[i], pts[(i + 1) % len(pts)], color, 1)
 
-    # 1. Mat trai & phai
+    # 1. Left & right eyes
     draw_list(LEFT_EYE, color=(0, 255, 255))
     draw_list(RIGHT_EYE, color=(0, 255, 255))
     
-    # 2. Moi
+    # 2. Mouth
     draw_list(MASK_MOUTH, color=(0, 255, 255))
     
-    # 3. Song mui (Moi them de thay full mat)
+    # 3. Nose bridge
     draw_list([168, 6, 197, 195, 5], color=(0, 255, 255), closed=False)
     
-    # 4. Vien khuon mat (Face Oval - Tao hieu ung quat full mat)
+    # 4. Face oval contour
     draw_list([10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109], color=(0, 255, 255))
 
 
 def enhance_low_light(image: np.ndarray, brightness_threshold: float = 75.0) -> np.ndarray:
-    """Tăng cường độ tương phản và độ sáng bằng CLAHE nếu ảnh quá tối."""
+    """Enhance contrast and brightness using CLAHE if the image is too dark."""
     if image is None or image.size == 0:
         return image
     
-    # Tính toán độ sáng trung bình thông qua ảnh xám
+    # Calculate average brightness using grayscale
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     avg_brightness = float(np.mean(gray))
     
     if avg_brightness < brightness_threshold:
-        # Chuyển đổi sang hệ màu LAB
+        # Convert to LAB color space
         lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
         l, a, b = cv2.split(lab)
         
-        # Áp dụng CLAHE (Contrast Limited Adaptive Histogram Equalization) lên kênh L (Lightness)
+        # Apply CLAHE (Contrast Limited Adaptive Histogram Equalization) to L channel
         clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
         cl = clahe.apply(l)
         
-        # Ghép các kênh lại và trả về hệ màu BGR ban đầu
+        # Merge channels back and return BGR image
         enhanced_lab = cv2.merge((cl, a, b))
         return cv2.cvtColor(enhanced_lab, cv2.COLOR_LAB2BGR)
         
@@ -367,19 +367,19 @@ def enhance_low_light(image: np.ndarray, brightness_threshold: float = 75.0) -> 
 
 
 def load_key() -> bytes:
-    """Tải hoặc tự động tạo và lưu trữ khóa mã hóa Fernet vào tệp .env."""
+    """Load or automatically generate and store the Fernet encryption key in the .env file."""
     env_path = Path(__file__).resolve().parent / ".env"
     
-    # Load dotenv để cập nhật biến môi trường nếu có sẵn
+    # Load dotenv to update environment variables if available
     if env_path.exists():
         load_dotenv(dotenv_path=env_path)
     
     key_str = os.getenv("ENCRYPTION_KEY")
     if not key_str:
-        # Tạo khóa Fernet mới ngẫu nhiên
+        # Generate a new random Fernet key
         key = Fernet.generate_key()
         
-        # Ghi thủ công để đảm bảo hoạt động an toàn và tương thích trên mọi HĐH
+        # Write manually to ensure safety and cross-platform compatibility
         if env_path.exists():
             try:
                 content = env_path.read_text(encoding="utf-8")
@@ -402,7 +402,7 @@ def load_key() -> bytes:
         else:
             env_path.write_text(f"ENCRYPTION_KEY={key.decode()}\n", encoding="utf-8")
             
-        # Nạp lại biến môi trường
+        # Reload environment variables
         load_dotenv(dotenv_path=env_path)
         return key
         
@@ -410,7 +410,7 @@ def load_key() -> bytes:
 
 
 def encrypt_embedding(embedding: np.ndarray, key: bytes) -> bytes:
-    """Mã hóa vector embedding bằng Fernet sau khi đã đóng gói bằng pickle."""
+    """Encrypt the embedding vector using Fernet after serializing with pickle."""
     if embedding is None:
         return b""
     serialized = pickle.dumps(embedding)
@@ -419,14 +419,14 @@ def encrypt_embedding(embedding: np.ndarray, key: bytes) -> bytes:
 
 
 def decrypt_embedding(encrypted_data: bytes, key: bytes) -> np.ndarray:
-    """Giải mã dữ liệu thô đã mã hóa và tái tạo lại vector numpy embedding."""
+    """Decrypt raw data and deserialize back to a NumPy embedding vector."""
     f = Fernet(key)
     decrypted_data = f.decrypt(encrypted_data)
     return pickle.loads(decrypted_data)
 
 
 def save_face_encrypted(name: str, embedding: np.ndarray, faces_dir="faces"):
-    """Mã hóa và lưu trữ đặc trưng khuôn mặt vào thư mục dưới dạng file .npy (đã mã hóa bảo mật)."""
+    """Encrypt and store face features as an encrypted .npy file."""
     p_dir = Path(faces_dir)
     p_dir.mkdir(parents=True, exist_ok=True)
     
@@ -436,14 +436,14 @@ def save_face_encrypted(name: str, embedding: np.ndarray, faces_dir="faces"):
     target_path = p_dir / f"{name}.npy"
     with open(target_path, "wb") as f:
         f.write(encrypted_bytes)
-    print(f"[SECURE] Da ma hoa va luu tru thanh cong khuon mat: {name}.npy")
+    print(f"[SECURE] Successfully encrypted and stored face template: {name}.npy")
 
 
 def load_known_faces_encrypted(faces_dir="faces") -> Dict[str, np.ndarray]:
     """
-    Tải tất cả khuôn mặt đã đăng ký từ thư mục dữ liệu.
-    Hỗ trợ TƯƠNG THÍCH NGƯỢC: tự động phát hiện file .npy thô cũ chưa mã hóa, 
-    nạp vào RAM, tự động mã hóa và ghi đè lại file để bảo mật vĩnh viễn.
+    Load all registered faces from the database directory.
+    Provides BACKWARD COMPATIBILITY: automatically detects raw legacy unencrypted .npy files,
+    loads them, and rewrites them in encrypted Fernet format for permanent security.
     """
     p_dir = Path(faces_dir)
     p_dir.mkdir(parents=True, exist_ok=True)
@@ -451,7 +451,7 @@ def load_known_faces_encrypted(faces_dir="faces") -> Dict[str, np.ndarray]:
     embeddings = {}
     key = load_key()
     
-    # Quét cả .npy và .enc đề phòng người dùng đổi đuôi thủ công
+    # Scan both .npy and .enc extensions in case of manual renames
     for path in list(p_dir.glob("*.npy")) + list(p_dir.glob("*.enc")):
         if not path.is_file():
             continue
@@ -461,28 +461,28 @@ def load_known_faces_encrypted(faces_dir="faces") -> Dict[str, np.ndarray]:
             with open(path, "rb") as f:
                 header = f.read(6)
             
-            # Magic bytes tiêu chuẩn của file NumPy thô là \x93NUMPY
+            # Standard magic bytes for raw NumPy files are \x93NUMPY
             is_old_npy = (header == b"\x93NUMPY")
             
             if is_old_npy:
-                # Đọc theo cấu trúc file numpy chưa mã hóa ban đầu
+                # Read raw legacy unencrypted numpy file structure
                 raw_emb = np.load(path)
                 norm_emb = raw_emb.astype(np.float32)
                 
-                # Chuẩn hóa Vector đặc trưng L2 norm
+                # Normalize feature vector (L2 norm)
                 norm = float(np.linalg.norm(norm_emb))
                 if norm > 1e-8:
                     norm_emb = (norm_emb / norm).astype(np.float32)
                 
-                # Lưu đè lại dưới dạng đã mã hóa Fernet
+                # Overwrite the file with Fernet encrypted data
                 encrypted_bytes = encrypt_embedding(norm_emb, key)
                 with open(path, "wb") as f:
                     f.write(encrypted_bytes)
                 
                 embeddings[name] = norm_emb
-                print(f"[MIGRATION] Da tu dong di tru va ma hoa file npy cu: {path.name}")
+                print(f"[MIGRATION] Automatically migrated and encrypted legacy file: {path.name}")
             else:
-                # File đã được mã hóa an toàn
+                # File is already securely encrypted
                 with open(path, "rb") as f:
                     encrypted_data = f.read()
                 
@@ -495,11 +495,11 @@ def load_known_faces_encrypted(faces_dir="faces") -> Dict[str, np.ndarray]:
 
 
 def get_base_username(name: str) -> str:
-    """Tách tên người dùng gốc từ tên file template (ví dụ: john_1 -> john)."""
+    """Extract base username from template filename (e.g., john_1 -> john)."""
     if name is None:
         return ""
     import re
-    # Xóa hậu tố _\d+ ở cuối tên nếu có
+    # Remove trailing _\d+ suffix if present
     match = re.match(r"^(.+?)_\d+$", name)
     if match:
         return match.group(1)
@@ -508,14 +508,14 @@ def get_base_username(name: str) -> str:
 
 def save_face_multi_template(name: str, embedding: np.ndarray, faces_dir="faces") -> int:
     """
-    Mã hóa và lưu trữ đặc trưng khuôn mặt hỗ trợ Đa mẫu (Multi-template, tối đa 3 mẫu).
-    Quay vòng (round-robin) thay thế mẫu cũ nhất (dựa trên mtime) nếu đã có đủ 3 mẫu.
-    Trả về số thứ tự mẫu đã lưu (0, 1 hoặc 2).
+    Encrypt and store face features supporting Multi-Template grouping (up to 3 templates per user).
+    Uses round-robin replacement for the oldest template (based on mtime) if 3 templates already exist.
+    Returns the saved template index (0, 1, or 2).
     """
     p_dir = Path(faces_dir)
     p_dir.mkdir(parents=True, exist_ok=True)
     
-    # Tìm các mẫu hiện có của user này (hỗ trợ cả .npy và .enc)
+    # Find existing templates for this user (both .npy and .enc)
     existing_indices = []
     for idx in range(3):
         npy_path = p_dir / f"{name}_{idx}.npy"
@@ -523,11 +523,11 @@ def save_face_multi_template(name: str, embedding: np.ndarray, faces_dir="faces"
         if npy_path.exists() or enc_path.exists():
             existing_indices.append(idx)
             
-    # Hỗ trợ di trú file gốc không có hậu tố _ (nếu người dùng đã có file john.npy trước đó)
+    # Support migrating legacy files with no suffix (e.g. john.npy)
     legacy_npy = p_dir / f"{name}.npy"
     legacy_enc = p_dir / f"{name}.enc"
     if legacy_npy.exists() or legacy_enc.exists():
-        # Đổi tên file legacy thành john_0
+        # Rename legacy file to john_0
         if legacy_npy.exists() and not (p_dir / f"{name}_0.npy").exists():
             try:
                 legacy_npy.rename(p_dir / f"{name}_0.npy")
@@ -541,16 +541,16 @@ def save_face_multi_template(name: str, embedding: np.ndarray, faces_dir="faces"
         if 0 not in existing_indices:
             existing_indices.append(0)
             
-    # Chọn index để lưu
+    # Select index to save
     if len(existing_indices) < 3:
-        # Nếu chưa đủ 3 mẫu, lưu vào index tiếp theo chưa có
+        # If less than 3 templates, save to the next available index
         save_idx = 0
         for idx in range(3):
             if idx not in existing_indices:
                 save_idx = idx
                 break
     else:
-        # Nếu đã có đủ 3 mẫu, ta tìm file cũ nhất (mtime nhỏ nhất) để ghi đè
+        # If 3 templates exist, find the oldest file (minimum mtime) to overwrite
         save_idx = 0
         oldest_time = float("inf")
         for idx in range(3):
@@ -562,34 +562,34 @@ def save_face_multi_template(name: str, embedding: np.ndarray, faces_dir="faces"
                         oldest_time = mtime
                         save_idx = idx
         
-    # Lưu mẫu đã mã hóa
+    # Save the encrypted template
     save_face_encrypted(f"{name}_{save_idx}", embedding, faces_dir)
     return save_idx
 
 
 def check_anti_spoofing(image: np.ndarray, box: FaceBox) -> Tuple[bool, str, float]:
     """
-    Phát hiện giả mạo khuôn mặt (Anti-Spoofing) bằng cách kết hợp:
-    1. Độ sắc nét (Laplacian Variance): Phát hiện ảnh in mờ hoặc màn hình phản chiếu.
-    2. Phân tích Tần số Cao (FFT Moire): Phát hiện vân sọc quét của màn hình điện thoại/máy tính.
-    3. Điểm tin cậy tổng hợp (Liveness Texture Score).
-    Trả về: (is_real, reason, score)
+    Perform face anti-spoofing detection combining:
+    1. Sharpness (Laplacian Variance): Detects blurry print photos or screen reflections.
+    2. High-Frequency Analysis (FFT Moire): Detects moire scan lines from phone/PC screens.
+    3. Combined Liveness Texture Score.
+    Returns: (is_real, reason, score)
     """
     if image is None or image.size == 0 or box is None:
         return True, "Genuine", 1.0
         
     top, right, bottom, left = box
-    # Crop vùng mặt
+    # Crop face region
     face = image[top:bottom, left:right]
     if face.size == 0:
         return True, "Genuine", 1.0
         
-    # 1. Tải ảnh xám và tính Laplacian Variance (Độ sắc nét)
+    # 1. Load gray image and calculate Laplacian variance (sharpness)
     gray = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)
     lap_var = float(cv2.Laplacian(gray, cv2.CV_64F).var())
     
-    # 2. Phân tích tần số FFT (Phát hiện moire màn hình)
-    # Resize về kích thước chuẩn 100x100 để đảm bảo phân tích tần số đồng nhất
+    # 2. FFT frequency analysis (detect screen moire)
+    # Resize to standard 100x100 for consistent frequency analysis
     resized = cv2.resize(gray, (100, 100))
     f = np.fft.fft2(resized)
     fshift = np.fft.fftshift(f)
@@ -597,23 +597,23 @@ def check_anti_spoofing(image: np.ndarray, box: FaceBox) -> Tuple[bool, str, flo
     
     h, w = magnitude_spectrum.shape
     cy, cx = h // 2, w // 2
-    # Năng lượng tần số thấp ở trung tâm (kích thước 50x50)
+    # Low frequency energy at the center (50x50 size)
     low_energy = float(magnitude_spectrum[cy-25:cy+25, cx-25:cx+25].sum())
     total_energy = float(magnitude_spectrum.sum())
     high_energy = total_energy - low_energy
     high_freq_ratio = high_energy / (total_energy + 1e-6)
     
-    # 3. Tính điểm tin cậy tổng hợp
-    # Ảnh in/màn hình thường có độ sắc nét cực thấp do độ phân giải camera hoặc phản xạ,
-    # hoặc có vân moire quá mạnh (tỷ lệ tần số cao đột biến)
+    # 3. Calculate combined confidence score
+    # Printed images / screens often have very low sharpness due to resolution/reflections,
+    # or have excessively strong moire patterns (high frequency spikes)
     score = 1.0
     is_real = True
     reason = "Genuine"
     
-    # Phạt điểm sắc nét thấp (ngưỡng tiêu chuẩn là 90)
+    # Penalty for low sharpness (standard threshold is 90)
     if lap_var < 90.0:
         score -= (90.0 - lap_var) * 0.008
-    # Phạt vân Moire tần số cao (ngưỡng tiêu chuẩn là 0.65)
+    # Penalty for high frequency Moire (standard threshold is 0.65)
     if high_freq_ratio > 0.65:
         score -= (high_freq_ratio - 0.65) * 4.0
         
@@ -633,11 +633,11 @@ def check_anti_spoofing(image: np.ndarray, box: FaceBox) -> Tuple[bool, str, flo
 
 
 def detect_all_faces(image: np.ndarray) -> List[FaceBox]:
-    """Phát hiện tất cả khuôn mặt trong ảnh để phục vụ Ghost Mode (chống nhìn trộm)."""
+    """Detect all faces in the image for Ghost Mode (shoulder-surfing prevention)."""
     if image is None or image.size == 0:
         return []
 
-    # Tăng cường ánh sáng yếu (Night Shift AI)
+    # Low-light enhancement (Night Shift AI)
     image = enhance_low_light(image)
 
     detector = _get_detector()
@@ -667,8 +667,8 @@ def detect_all_faces(image: np.ndarray) -> List[FaceBox]:
 
 def publish_mqtt_event(username: str, status: str):
     """
-    Gửi tín hiệu MQTT về Smart Home (Home Assistant) khi mở khóa thành công.
-    Tự động bỏ qua nếu không cấu hình MQTT_BROKER trong file .env.
+    Publish MQTT events to Smart Home (Home Assistant) on successful unlock.
+    Automatically ignored if MQTT_BROKER is not configured in the .env file.
     """
     import os
     import json
@@ -685,7 +685,7 @@ def publish_mqtt_event(username: str, status: str):
     try:
         import paho.mqtt.client as mqtt
         
-        # Tạo MQTT Client với phiên bản giao thức thích hợp (hỗ trợ v5/v3 tương thích ngược)
+        # Create MQTT Client with appropriate protocol version (backwards compatible)
         client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1 if hasattr(mqtt, "CallbackAPIVersion") else None)
         client.connect(broker, port, 10)
         
@@ -699,9 +699,9 @@ def publish_mqtt_event(username: str, status: str):
         
         client.publish(topic, json.dumps(payload), qos=1)
         client.disconnect()
-        print(f"[MQTT] Da gui su kien sinh trac hoc toi broker '{broker}': {status} cho {username}")
+        print(f"[MQTT] Biometric event published to broker '{broker}': {status} for {username}")
     except Exception as e:
-        print(f"[MQTT ERROR] Khong the gui tin hieu smart home: {e}")
+        print(f"[MQTT ERROR] Failed to publish smart home event: {e}")
 
 
 

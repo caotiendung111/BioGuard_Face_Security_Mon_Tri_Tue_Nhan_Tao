@@ -36,13 +36,13 @@ RECONNECT_DELAY_SECONDS = 1.0
 
 
 def safe_name(name: str) -> str:
-    """Lam sach ten de dung lam ten file .npy."""
+    """Clean name string for use as a filename."""
     cleaned = re.sub(r"[^A-Za-z0-9_-]+", "_", name.strip())
     return cleaned or "user"
 
 
 def normalize_embedding(embedding: np.ndarray) -> np.ndarray:
-    """Chuan hoa vector truoc khi luu/so sanh."""
+    """Normalize embedding vector before saving or comparing."""
     norm = float(np.linalg.norm(embedding))
     if norm <= 1e-8:
         return embedding.astype(np.float32)
@@ -50,17 +50,17 @@ def normalize_embedding(embedding: np.ndarray) -> np.ndarray:
 
 
 def load_embeddings() -> Dict[str, np.ndarray]:
-    """Đọc và giải mã toàn bộ khuôn mặt đã đăng ký từ faces/."""
+    """Read and decrypt all registered faces from faces/."""
     return load_known_faces_encrypted(FACES_DIR)
 
 
 def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
-    """SciPy cosine la distance, nen similarity = 1 - distance."""
+    """SciPy cosine calculates distance, so similarity is 1.0 - distance."""
     return 1.0 - float(cosine(normalize_embedding(a), normalize_embedding(b)))
 
 
 def best_match(embedding: np.ndarray, registered: Dict[str, np.ndarray]) -> Tuple[Optional[str], float]:
-    """Tìm embedding đã đăng ký có điểm similarity cao nhất, tự động tách tên người dùng gốc."""
+    """Find the registered embedding with the highest similarity score."""
     best_base_name = None
     best_score = -1.0
     for full_name, known in registered.items():
@@ -73,7 +73,7 @@ def best_match(embedding: np.ndarray, registered: Dict[str, np.ndarray]) -> Tupl
 
 
 def build_stream_url(args) -> str:
-    """Lay URL stream tu tham so, bien moi truong hoac hoi nguoi dung."""
+    """Get the streaming URL from arguments, environment, or user input."""
     if args.url:
         return args.url
 
@@ -83,20 +83,20 @@ def build_stream_url(args) -> str:
 
     ip = args.ip or os.getenv("FACEUNLOCK_PHONE_IP")
     while not ip:
-        ip = input("Nhap IP dien thoai (vd 192.168.1.5): ").strip()
+        ip = input("Enter mobile camera IP (e.g. 192.168.1.5): ").strip()
 
     return f"http://{ip}:{args.port}/video"
 
 
 def open_stream(source) -> cv2.VideoCapture:
-    """Mo stream tu IP URL hoac camera index USB."""
+    """Open video stream from IP URL or USB camera index."""
     cap = cv2.VideoCapture(source)
     cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
     return cap
 
 
 def draw_ui(frame, box: Optional[FaceBox], status: str, color, detail: str = ""):
-    """Ve bounding box, trang thai va phim tat."""
+    """Draw UI bounding box, status, and shortcuts."""
     if box is not None:
         top, right, bottom, left = box
         cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
@@ -117,14 +117,14 @@ def draw_ui(frame, box: Optional[FaceBox], status: str, color, detail: str = "")
 
 
 def waiting_frame(message: str) -> np.ndarray:
-    """Tao frame den khi mat ket noi stream."""
+    """Create a blank black frame when the stream connection is lost."""
     frame = np.zeros((720, 1280, 3), dtype=np.uint8)
     cv2.putText(frame, message, (60, 360), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 2)
     return frame
 
 
 def collect_liveness(cap: cv2.VideoCapture, box: FaceBox) -> bool:
-    """Thu 10 frame tu IP stream de kiem tra chop mat."""
+    """Capture frames from stream to check for blink liveness."""
     history = []
 
     for _ in range(BLINK_FRAMES):
@@ -143,22 +143,22 @@ def collect_liveness(cap: cv2.VideoCapture, box: FaceBox) -> bool:
 
 
 def register_face(frame: np.ndarray, box: FaceBox, landmarks, registered: Dict[str, np.ndarray]):
-    """Đăng ký người dùng mới từ frame hiện tại bằng mã hóa sinh trắc học Fernet."""
+    """Register a new user from the current frame using Fernet encryption."""
     if is_wearing_mask(landmarks):
-        print("Đăng ký thất bại: Hãy tháo khẩu trang khi đăng ký.")
+        print("Registration failed: Please remove your face mask first.")
         return
 
-    name = safe_name(input("Nhập tên người dùng: "))
+    name = safe_name(input("Enter username: "))
     target = FACES_DIR / f"{name}.npy"
     if target.exists():
-        answer = input(f"{target.name} đã tồn tại. Ghi đè? [y/N]: ").strip().lower()
+        answer = input(f"{target.name} already exists. Overwrite? [y/N]: ").strip().lower()
         if answer != "y":
-            print("Đã hủy đăng ký.")
+            print("Registration canceled.")
             return
 
     embedding = get_embedding(frame, box)
     if embedding is None:
-        print("Không tạo được embedding, vui lòng thử lại.")
+        print("Failed to extract embedding, please try again.")
         return
 
     # Chuẩn hóa Vector
@@ -166,15 +166,15 @@ def register_face(frame: np.ndarray, box: FaceBox, landmarks, registered: Dict[s
     
     # Mã hóa và lưu trữ bảo mật hỗ trợ đa mẫu (Multi-template)
     save_idx = save_face_multi_template(name, embedding, FACES_DIR)
-    print(f"Da dang ky va ma hoa an toan file faces/{name}_{save_idx}.npy")
+    print(f"[SECURE] Successfully registered and encrypted faces/{name}_{save_idx}.npy")
     
-    # Nạp lại toàn bộ danh sách để đồng bộ hệ thống
+    # Reload all embeddings to sync the system state
     registered.clear()
     registered.update(load_embeddings())
 
 
 def main():
-    # Tải biến môi trường
+    # Load environment variables
     load_dotenv()
     
     parser = argparse.ArgumentParser(description="FaceUnlock dung IVcam/IP Camera/USB camera ao")
@@ -187,8 +187,8 @@ def main():
 
     source = args.camera if args.camera is not None else build_stream_url(args)
     registered = load_embeddings()
-    print(f"Dang ket noi camera: {source}")
-    print(f"Da nap {len(registered)} khuon mat da dang ky.")
+    print(f"Connecting to camera: {source}")
+    print(f"Loaded {len(registered)} registered face templates.")
 
     cap = open_stream(source)
     cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_NORMAL)
@@ -206,7 +206,7 @@ def main():
                 cap = open_stream(source)
                 last_reconnect = now
 
-            placeholder = waiting_frame("Dang cho ket noi camera...")
+            placeholder = waiting_frame("Waiting for camera stream connection...")
             cv2.imshow(WINDOW_NAME, placeholder)
             key = cv2.waitKey(1) & 0xFF
             if key == ord("q"):
@@ -262,7 +262,7 @@ def main():
             break
         if key == ord("r"):
             if box is None:
-                print("Khong thay khuon mat de dang ky.")
+                print("No face detected to register.")
             else:
                 register_face(frame, box, landmarks, registered)
 
